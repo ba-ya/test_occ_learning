@@ -5,6 +5,7 @@
 #include <QVTKOpenGLNativeWidget.h>
 #include <vtkRenderer.h>
 #include <TopoDS_Shape.hxx>
+#include <vtkCameraOrientationWidget.h>
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -32,11 +33,10 @@ private:
     void reset_camera();
     void do_render();
 
-    void Bottle();
-
 private:
     Ui::MainWindow *ui;
     QVTKOpenGLNativeWidget *vtk_widget;
     vtkSmartPointer<vtkRenderer> renderer;
+    vtkSmartPointer<vtkCameraOrientationWidget> cow;
 };
 #endif // MAINWINDOW_H

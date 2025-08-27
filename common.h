@@ -8,7 +8,7 @@
 #include <vtkActor2D.h>
 #include <vtkRenderer.h>
 #include <vtkPolyDataMapper.h>
-#include <vtkProperty.h>.h>
+#include <vtkProperty.h>
 #include <vtkSmartPointer.h>
 #include <TopoDS_Shape.hxx>
 #include <IVtkTools_ShapeDataSource.hxx>
@@ -30,6 +30,13 @@ static vtkSmartPointer<vtkActor> shape_to_actor(TopoDS_Shape &shape) {
     actor->GetProperty()->SetRepresentationToSurface();
     actor->GetProperty()->SetEdgeVisibility(false);
     return actor;
+}
+
+static QString str(const gp_Pnt2d &pnt) {
+    return QString("(%1, %2)").arg(pnt.X()).arg(pnt.Y());
+}
+static QString str(const gp_Pnt &pnt) {
+    return QString("(%1, %2, %3)").arg(pnt.X()).arg(pnt.Y()).arg(pnt.Z());
 }
 }
 

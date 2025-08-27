@@ -36,6 +36,10 @@ void MainWindow::init()
     renderer->SetBackground(colors->GetColor3d("SlateGray").GetData());
     vtk_widget->renderWindow()->AddRenderer(renderer);
 
+    cow = vtkSmartPointer<vtkCameraOrientationWidget>::New();
+    cow->SetParentRenderer(renderer);
+    cow->On();
+
     init_examples();
 }
 
@@ -77,7 +81,7 @@ void MainWindow::init_examples()
     init_table(ui->table, get_class_name());
 
     connect(ui->table, &QTableWidget::itemDoubleClicked, this, [this](QTableWidgetItem *item) {
-        ui->lineEdit_name->setText(QString("%1, %2").arg(item->row()+ 1).arg(item->text()));
+        ui->lineEdit_name->setText(QString("%1-%2").arg(item->row()+ 1).arg(item->text()));
         do_something(item->text());
     });
 }
@@ -111,12 +115,6 @@ void MainWindow::do_render()
 {
     vtk_widget->renderWindow()->Render();
 }
-
-void MainWindow::Bottle()
-{
-
-}
-
 
 void MainWindow::on_btn_reset_camera_released()
 {
