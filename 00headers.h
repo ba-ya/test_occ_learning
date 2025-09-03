@@ -8,4 +8,8 @@ namespace Bottle {
 void Draw(vtkRenderer* renderer);
 }
 
+namespace ModelingData {
+void Draw(vtkRenderer* renderer);
+}
+
 #endif // _1_2D_CELLS_H

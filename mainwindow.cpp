@@ -91,6 +91,8 @@ void MainWindow::do_something(const QString &name)
     clear();
     if (name == "Bottle") {
         Bottle::Draw(renderer);
+    } else if (name == "ModelingData") {
+        ModelingData::Draw(renderer);
     }
     reset_camera();
     do_render();

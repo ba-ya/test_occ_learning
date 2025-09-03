@@ -30,6 +30,7 @@ set(EXAMPLE
     common.h
     00headers.h
     examples/01Bottle.cpp
+    examples/02ModelingData.cpp
 )
 
 set(PROJECT_SOURCES
