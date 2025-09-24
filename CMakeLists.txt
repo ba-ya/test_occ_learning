@@ -31,6 +31,7 @@ set(EXAMPLE
     00headers.h
     examples/01Bottle.cpp
     examples/02ModelingData.cpp
+    examples/03ModelingAlgorithms.cpp
 )
 
 set(PROJECT_SOURCES
@@ -42,6 +43,10 @@ set(PROJECT_SOURCES
 )
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
+
+# target_sources(test_occ_learning
+#   PRIVATE
+# )
 qt_add_executable(test_occ_learning
         MANUAL_FINALIZATION
         ${PROJECT_SOURCES}

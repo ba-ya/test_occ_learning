@@ -31,16 +31,22 @@ void MainWindow::init()
     vtk_widget->setRenderWindow(renderWindow);
     ui->layout->addWidget(vtk_widget);
 
-    renderer = vtkSmartPointer<vtkRenderer>::New();
-    auto colors = vtkSmartPointer<vtkNamedColors>::New();
-    renderer->SetBackground(colors->GetColor3d("SlateGray").GetData());
-    vtk_widget->renderWindow()->AddRenderer(renderer);
-
     cow = vtkSmartPointer<vtkCameraOrientationWidget>::New();
-    cow->SetParentRenderer(renderer);
-    cow->On();
 
     init_examples();
+
+    connect(ui->btn_xoy, &QPushButton::released, this, [this]() {
+        reset_camera(XOY);
+        do_render();
+    });
+    connect(ui->btn_yoz, &QPushButton::released, this, [this]() {
+        reset_camera(YOZ);
+        do_render();
+    });
+    connect(ui->btn_zox, &QPushButton::released, this, [this]() {
+        reset_camera(ZOX);
+        do_render();
+    });
 }
 
 void MainWindow::init_examples()
@@ -89,28 +95,78 @@ void MainWindow::init_examples()
 void MainWindow::do_something(const QString &name)
 {
     clear();
+    int size = 1;
+    if (renders.size() != size) {
+        resize_render(size, 1 , 1);
+    }
+    auto m_render = renders[0];
     if (name == "Bottle") {
-        Bottle::Draw(renderer);
+        Bottle::Draw(m_render);
     } else if (name == "ModelingData") {
-        ModelingData::Draw(renderer);
+        ModelingData::Draw(m_render);
+    } else if (name == "ModelingAlgorithms") {
+        resize_render(20, 5, 4);
+        ModelingAlgorithms::Draw(renders);
+    }
+    if (renders.size() == 1) {
+        cow->SetParentRenderer(m_render);
+        cow->On();
+    } else {
+        cow->Off();
     }
     reset_camera();
     do_render();
 }
 
-void MainWindow::clear()
+void MainWindow::resize_render(int count, int grid_rows, int grid_cols)
 {
-    renderer->RemoveAllViewProps();
+    for (auto &render : renders) {
+        vtk_widget->renderWindow()->RemoveRenderer(render);
+    }
+    renders.clear();
+    auto colors = vtkSmartPointer<vtkNamedColors>::New();
+    std::vector<double *> color_list = {
+        colors->GetColor3d("SlateGray").GetData(),
+        colors->GetColor3d("DarkSlateGray").GetData(),
+    };
+    for (int i = 0; i < count; ++i) {
+        auto render = vtkSmartPointer<vtkRenderer>::New();
+        render->SetBackground(color_list.at(i % color_list.size()));
+
+        vtk_widget->renderWindow()->AddRenderer(render);
+        renders.push_back(render);
+    }
+    Helper::layout_renders_in_grid(renders, grid_rows, grid_cols);
 }
 
-void MainWindow::reset_camera()
+void MainWindow::clear()
 {
-    auto camera = renderer->GetActiveCamera();
-    camera->SetPosition(0, 0, 600);
-    camera->SetFocalPoint(0, 0, 0);
-    camera->SetViewUp(0, 1, 0);
-    renderer->ResetCamera();
-    renderer->ResetCameraClippingRange();
+    for (auto &render : renders) {
+        render->RemoveAllViewProps();
+    }
+}
+
+void MainWindow::reset_camera(VIEWPLANE plane)
+{
+    double pos[3]{0, 0, 0}, focal[3]{0, 0, 0}, up[3]{0, 0, 0};
+    if (plane == XOY) {
+        pos[2] = 600;// z
+        up[1] = 1; // y
+    } else if (plane == YOZ){
+        pos[0] = 600;// x
+        up[2] = 1;// z
+    } else {
+        pos[1] = 600;// y
+        up[0] = 1; // x
+    }
+    for (auto &render : renders) {
+        auto camera = render->GetActiveCamera();
+        camera->SetPosition(pos);
+        camera->SetFocalPoint(focal);
+        camera->SetViewUp(up);
+        render->ResetCamera();
+        render->ResetCameraClippingRange();
+    }
 }
 
 void MainWindow::do_render()
@@ -118,9 +174,4 @@ void MainWindow::do_render()
     vtk_widget->renderWindow()->Render();
 }
 
-void MainWindow::on_btn_reset_camera_released()
-{
-    reset_camera();
-    do_render();
-}
 

@@ -21,22 +21,25 @@ public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
-private slots:
-    void on_btn_reset_camera_released();
-
 private:
     void init();
     void init_examples();
     void do_something(const QString &name);
+    void resize_render(int count, int grid_rows, int grid_cols);
 
     void clear();
-    void reset_camera();
+    enum VIEWPLANE{
+        XOY,// right_dir O up_dir
+        YOZ,
+        ZOX,
+    };
+    void reset_camera(VIEWPLANE plane = XOY);
     void do_render();
 
 private:
     Ui::MainWindow *ui;
     QVTKOpenGLNativeWidget *vtk_widget;
-    vtkSmartPointer<vtkRenderer> renderer;
+    std::vector<vtkSmartPointer<vtkRenderer>> renders;
     vtkSmartPointer<vtkCameraOrientationWidget> cow;
 };
 #endif // MAINWINDOW_H
