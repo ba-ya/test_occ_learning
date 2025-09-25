@@ -28,9 +28,7 @@
 
 [拔模](./examples/readme_3拔模.md)
 
-
-
-
+![image-20250925104726970](README.assets/image-20250925104726970.png)
 
 
 

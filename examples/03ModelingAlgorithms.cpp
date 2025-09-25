@@ -39,10 +39,15 @@
 #include <Geom_Plane.hxx>
 #include <BRepBuilderAPI_Sewing.hxx>
 #include <Geom2d_Circle.hxx>
-#include <BRepBuilderAPI_MakeFace.hxx>
 #include <BRepLib.hxx>
 #include <BRepFeat_MakeDPrism.hxx>
 #include <vtkProperty.h>
+#include <GCE2d_MakeLine.hxx>
+#include <Geom2d_Line.hxx>
+#include <Geom_BezierCurve.hxx>
+#include <BRepFeat_MakePipe.hxx>
+#include <BRepPrimAPI_MakePrism.hxx>
+#include <BRepFeat_MakeLinearForm.hxx>
 void ModelingAlgorithms::Draw(std::vector<vtkSmartPointer<vtkRenderer>> renders)
 {
     int r_id = 0;
@@ -359,18 +364,100 @@ void ModelingAlgorithms::Draw(std::vector<vtkSmartPointer<vtkRenderer>> renders)
     auto colors = vtkSmartPointer<vtkNamedColors>::New();
     {
         auto render = renders[r_id++];
+        // 以xoy面为上下底,
+        // exp顺序为:左右前后下上, 与bound顺序一致,xmin, xmax, ymin, ymax, zmin, zmax
         TopoDS_Shape shape = BRepPrimAPI_MakeBox(400, 250, 300);
         TopExp_Explorer exp;
         exp.Init(shape, TopAbs_FACE);
-        QStringList color_names = {};
+#if 0
+        int target_id = 4;
         int i = 0;
         for (;exp.More(); exp.Next()) {
             TopoDS_Face face = TopoDS::Face(exp.Current());
             auto actor = Helper::shape_to_actor(face);
-            actor->GetProperty()->SetColor(colors->GetColor3d(color_names[i].toUtf8().constData()).GetData());
+            if (i == target_id) {
+                QString color_name = "DeepPink";
+                actor->GetProperty()->SetColor(colors->GetColor3d(color_name.toUtf8().constData()).GetData());
+            }
             render->AddActor(actor);
             i++;
         }
+#endif
+        exp.Next();// ex.current = 右
+        exp.Next();// ex.current = 前
+        TopoDS_Face box_front_face = TopoDS::Face(exp.Current());
+        Handle(Geom_Surface) surf = BRep_Tool::Surface(box_front_face);
+
+        BRepBuilderAPI_MakeWire make_wire;
+        gp_Pnt2d p1, p2;
+        p1 = gp_Pnt2d(100, 100);
+        p2 = gp_Pnt2d(200, 100);
+        Handle(Geom2d_Line) line = GCE2d_MakeLine(p1, p2).Value();
+        make_wire.Add(BRepBuilderAPI_MakeEdge(line, surf, 0, p1.Distance(p2)));
+
+        p1 = p2;
+        p2 = gp_Pnt2d(150, 200);
+        line = GCE2d_MakeLine(p1, p2).Value();
+        make_wire.Add(BRepBuilderAPI_MakeEdge(line, surf, 0, p1.Distance(p2)));
+
+        p1 = p2;
+        p2 = gp_Pnt2d(100, 100);
+        line = GCE2d_MakeLine(p1, p2).Value();
+        make_wire.Add(BRepBuilderAPI_MakeEdge(line, surf, 0, p1.Distance(p2)));
+
+        BRepBuilderAPI_MakeFace make_face;
+        make_face.Init(surf, Standard_False, 1e-6);
+        make_face.Add(make_wire.Wire());
+
+        TopoDS_Face triangle_face = make_face.Face();
+        BRepLib::BuildCurves3d(triangle_face);
+
+        TColgp_Array1OfPnt curve_poles(1, 3);
+        curve_poles(1) = gp_Pnt(150,   0, 150);
+        curve_poles(2) = gp_Pnt(200, 125, 150);
+        curve_poles(3) = gp_Pnt(150, 200, 150);
+        Handle(Geom_BezierCurve) curve = new Geom_BezierCurve(curve_poles);
+        TopoDS_Edge edge = BRepBuilderAPI_MakeEdge(curve);
+        TopoDS_Wire wire = BRepBuilderAPI_MakeWire(edge);
+
+        BRepFeat_MakePipe make_pipe(shape, triangle_face, box_front_face, wire, Standard_False, Standard_True);
+        make_pipe.Perform();
+        TopoDS_Shape pipe = make_pipe.Shape();
+
+        auto actor = Helper::shape_to_actor(pipe);
+        actor->GetProperty()->SetOpacity(.2);
+        render->AddActor(actor);
+    }
+
+    // r_id = 16
+    // rib,肋条
+    {
+        auto render = renders[r_id++];
+        BRepBuilderAPI_MakeWire make_wire;
+        std::vector<gp_Pnt> pnts = {
+            gp_Pnt(  0, 0, 0  ),
+            gp_Pnt(200, 0, 0  ),
+            gp_Pnt(200, 0, 50 ),
+            gp_Pnt( 50, 0, 50 ),
+            gp_Pnt( 50, 0, 200),
+            gp_Pnt(  0, 0, 200),
+            gp_Pnt(  0, 0, 0  ),
+        };
+        for (int i = 0; i < pnts.size() - 1; ++i) {
+            make_wire.Add(BRepBuilderAPI_MakeEdge(pnts.at(i), pnts.at(i + 1)));
+        }
+
+        TopoDS_Shape prism = BRepPrimAPI_MakePrism(BRepBuilderAPI_MakeFace(make_wire.Wire()),
+                                                   gp_Vec(gp_Pnt(0, 0, 0), gp_Pnt(0, 100, 0)));
+        TopoDS_Wire wire = BRepBuilderAPI_MakeWire(BRepBuilderAPI_MakeEdge(gp_Pnt(50, 50, 100), gp_Pnt(100, 50, 50)));
+        Handle(Geom_Plane) plane = new Geom_Plane(gp_Pnt(0, 50, 0), gp_Vec(0, 1, 0));
+        BRepFeat_MakeLinearForm form(prism, wire, plane, gp_Dir(0, 50, 0), gp_Dir(0, -25, 0), 1, Standard_True);
+
+        form.Perform();
+
+        TopoDS_Shape rst = form.Shape();
+        auto actor = Helper::shape_to_actor(rst);
+        render->AddActor(actor);
     }
 
 }
